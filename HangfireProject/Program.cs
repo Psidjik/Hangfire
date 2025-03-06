@@ -1,5 +1,7 @@
 using Hangfire;
+using Hangfire.BackGroundJobServices;
 using Hangfire.PostgreSql;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,7 @@ builder.Services.AddLogging(loggingBuilder =>
 
 builder.Services.AddHangfire(h =>
     h.UsePostgreSqlStorage(builder.Configuration.GetConnectionString("HangfireServiceConnection")));
+builder.Services.AddTransient<IBackgroundJobs, BackgroundJobs>();
 builder.Services.AddHangfireServer();
 // builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
@@ -33,6 +36,12 @@ app.UseHttpsRedirection();
 app.MapPost("api/notification/fire-and-forget", (string name) =>
     {
         string jobId = BackgroundJob.Enqueue(() => Console.WriteLine($"{name}, thank you for your job!"));
+        return Results.Ok($"Job id: {jobId}");
+    }
+);
+app.MapPost("api/notification/service-background-jobs", (string name, IBackgroundJobs backgroundJobs) =>
+    {
+        string jobId = BackgroundJob.Enqueue(() => backgroundJobs.BackgroundTask(name));
         return Results.Ok($"Job id: {jobId}");
     }
 );
